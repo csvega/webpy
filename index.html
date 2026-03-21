@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Python</title>
+<!-- CodeMirror -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/hint/show-hint.min.css">
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/python/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/selection/active-line.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/comment/comment.min.js"></script>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --surface: #252536;
+    --border: #3a3a5c;
+    --text: #e0e0f0;
+    --text-dim: #8888aa;
+    --accent: #7c6ff7;
+    --accent-hover: #9580ff;
+    --green: #50fa7b;
+    --yellow: #f1fa8c;
+    --red: #ff5555;
+    --cyan: #8be9fd;
+    --toolbar: #2a2a40;
+  }
+
+  html.light {
+    --bg: #f0f0f5;
+    --surface: #ffffff;
+    --border: #d0d0da;
+    --text: #1e1e2e;
+    --text-dim: #6b6b80;
+    --accent: #6c5ce7;
+    --accent-hover: #5a4bd1;
+    --green: #2d8a4e;
+    --yellow: #b58900;
+    --red: #dc3545;
+    --cyan: #0891b2;
+    --toolbar: #e4e4ec;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 20px;
+    background: var(--toolbar);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  header h1 span {
+    color: var(--yellow);
+    font-weight: 400;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #status {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  #status.ready { color: var(--green); }
+  #status.running { color: var(--yellow); }
+  #status.error { color: var(--red); }
+
+  .main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: var(--toolbar);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .divider {
+    width: 4px;
+    background: var(--border);
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .divider:hover, .divider.dragging {
+    background: var(--accent);
+  }
+
+  /* Editor */
+  #editor-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* CodeMirror custom dark theme */
+  .CodeMirror {
+    height: 100% !important;
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    font-family: 'Consolas', 'D2Coding', 'Fira Code', monospace !important;
+    font-size: 15px;
+    line-height: 1.6 !important;
+  }
+
+  .CodeMirror-gutters {
+    background: var(--bg) !important;
+    border-right: 1px solid var(--border) !important;
+  }
+
+  .CodeMirror-linenumber {
+    color: var(--text-dim) !important;
+    padding: 0 8px !important;
+  }
+
+  .CodeMirror-cursor {
+    border-left-color: var(--accent) !important;
+    border-left-width: 2px !important;
+  }
+
+  .CodeMirror-selected {
+    background: rgba(124, 111, 247, 0.2) !important;
+  }
+
+  .CodeMirror-focused .CodeMirror-selected {
+    background: rgba(124, 111, 247, 0.3) !important;
+  }
+
+  .CodeMirror-activeline-background {
+    background: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  .CodeMirror-matchingbracket {
+    color: var(--green) !important;
+    font-weight: bold;
+    background: rgba(80, 250, 123, 0.15);
+    border-bottom: 2px solid var(--green);
+    text-decoration: none;
+  }
+
+  /* Python syntax colors */
+  .cm-s-default .cm-keyword { color: #ff79c6 !important; }
+  .cm-s-default .cm-def { color: var(--green) !important; }
+  .cm-s-default .cm-variable { color: var(--text) !important; }
+  .cm-s-default .cm-variable-2 { color: var(--cyan) !important; }
+  .cm-s-default .cm-variable-3 { color: var(--cyan) !important; }
+  .cm-s-default .cm-string { color: var(--yellow) !important; }
+  .cm-s-default .cm-string-2 { color: var(--yellow) !important; }
+  .cm-s-default .cm-number { color: #bd93f9 !important; }
+  .cm-s-default .cm-operator { color: #ff79c6 !important; }
+  .cm-s-default .cm-comment { color: #6272a4 !important; font-style: italic; }
+  .cm-s-default .cm-builtin { color: var(--cyan) !important; }
+  .cm-s-default .cm-meta { color: var(--text-dim) !important; }
+  .cm-s-default .cm-atom { color: #bd93f9 !important; }
+  .cm-s-default .cm-property { color: var(--text) !important; }
+  .cm-s-default .cm-punctuation { color: var(--text) !important; }
+
+  .CodeMirror-scrollbar-filler {
+    background: var(--surface) !important;
+  }
+
+  /* Light mode syntax overrides */
+  html.light .cm-s-default .cm-keyword { color: #d63384 !important; }
+  html.light .cm-s-default .cm-def { color: #2d8a4e !important; }
+  html.light .cm-s-default .cm-variable { color: #1e1e2e !important; }
+  html.light .cm-s-default .cm-variable-2 { color: #0891b2 !important; }
+  html.light .cm-s-default .cm-variable-3 { color: #0891b2 !important; }
+  html.light .cm-s-default .cm-string { color: #b58900 !important; }
+  html.light .cm-s-default .cm-string-2 { color: #b58900 !important; }
+  html.light .cm-s-default .cm-number { color: #6f42c1 !important; }
+  html.light .cm-s-default .cm-operator { color: #d63384 !important; }
+  html.light .cm-s-default .cm-comment { color: #6b7280 !important; font-style: italic; }
+  html.light .cm-s-default .cm-builtin { color: #0891b2 !important; }
+  html.light .cm-s-default .cm-meta { color: #6b6b80 !important; }
+  html.light .cm-s-default .cm-atom { color: #6f42c1 !important; }
+
+  html.light .CodeMirror-activeline-background {
+    background: rgba(0, 0, 0, 0.04) !important;
+  }
+
+  html.light .CodeMirror-selected {
+    background: rgba(108, 92, 231, 0.15) !important;
+  }
+
+  html.light .CodeMirror-focused .CodeMirror-selected {
+    background: rgba(108, 92, 231, 0.25) !important;
+  }
+
+  /* Theme toggle button */
+  .btn-theme {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    font-size: 16px;
+    padding: 4px 10px;
+    line-height: 1;
+  }
+
+  .btn-theme:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+  }
+
+  /* Font size group */
+  .font-size-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .font-size-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  /* Toolbar buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .btn-run {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-run:hover { background: var(--accent-hover); }
+
+  .btn-run:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-stop {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .btn-stop:hover { opacity: 0.85; }
+
+  .btn-clear {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  .btn-clear:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+  }
+
+  .btn-example {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    position: relative;
+  }
+
+  .btn-example:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+  }
+
+  /* Output / Console */
+  #output-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #output {
+    flex: 1;
+    background: var(--surface);
+    padding: 14px;
+    font-family: 'Consolas', 'D2Coding', 'Fira Code', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  #output .out-line { color: var(--text); }
+  #output .err-line { color: var(--red); }
+  #output .info-line { color: var(--cyan); font-style: italic; }
+  #output .input-prompt-text { color: var(--yellow); }
+
+  #output .input-echo {
+    color: var(--green);
+    border: 1px solid var(--green);
+    border-radius: 4px;
+    padding: 0 6px;
+    margin-left: 2px;
+  }
+
+  /* Inline input */
+  .input-row {
+    display: flex;
+    align-items: baseline;
+    line-height: 1.6;
+    min-height: calc(14px * 1.6);
+  }
+
+  .input-row .prompt-label {
+    color: var(--yellow);
+    white-space: pre;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .input-row input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    outline: none;
+    color: var(--green);
+    font-family: 'Consolas', 'D2Coding', 'Fira Code', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 0 4px;
+    margin: 0;
+    caret-color: var(--green);
+  }
+
+  /* Example dropdown */
+  .dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 200px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  .dropdown.show { display: block; }
+
+  .dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: inherit;
+  }
+
+  .dropdown button:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Loading overlay */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30,30,46,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    gap: 16px;
+  }
+
+  #loading-overlay.hidden { display: none; }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #loading-text {
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main-container {
+      flex-direction: column;
+    }
+    .divider {
+      width: 100%;
+      height: 4px;
+      cursor: row-resize;
+    }
+    header h1 { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Web <span>Python</span> Playground</h1>
+  <div class="header-right">
+    <span id="status">Pyodide loading...</span>
+    <button class="btn btn-theme" id="themeBtn" onclick="toggleTheme()" title="테마 전환">&#9790;</button>
+    <span class="font-size-group">
+      <button class="btn btn-theme" onclick="changeFontSize(-2)" title="글씨 축소">A-</button>
+      <span id="fontSizeLabel" class="font-size-label">15</span>
+      <button class="btn btn-theme" onclick="changeFontSize(2)" title="글씨 확대">A+</button>
+    </span>
+    <div style="position:relative" id="exampleBtn">
+      <div class="btn btn-example" onclick="toggleExamples()">
+        예제 &#9662;
+      </div>
+      <div class="dropdown" id="exampleDropdown">
+        <button onclick="loadExample('hello')">Hello World</button>
+        <button onclick="loadExample('input')">입력(input) 예제</button>
+        <button onclick="loadExample('loop')">반복문 (for)</button>
+        <button onclick="loadExample('list')">리스트</button>
+        <button onclick="loadExample('function')">함수</button>
+        <button onclick="loadExample('calc')">계산기</button>
+        <button onclick="loadExample('guessing')">숫자 맞추기 게임</button>
+        <button onclick="loadExample('turtle_text')">터틀 아트 (텍스트)</button>
+      </div>
+    </div>
+    <button class="btn btn-clear" onclick="clearOutput()">출력 지움</button>
+    <button class="btn btn-run" id="runBtn" onclick="runCode()" disabled>
+      <span id="runLabel">&#9654; 실행</span>
+    </button>
+    <button class="btn btn-stop" id="stopBtn" onclick="stopCode()" style="display:none">
+      &#9632; Stop
+    </button>
+  </div>
+</header>
+
+<div class="main-container">
+  <div class="panel" id="editorPanel">
+    <div class="panel-header">
+      <span>코드 작성창</span>
+      <span style="font-size:11px;text-transform:none;letter-spacing:0;font-weight:400">실행: Ctrl+Enter</span>
+    </div>
+    <div id="editor-container">
+      <textarea id="editor">print("Hello, World!")</textarea>
+    </div>
+  </div>
+
+  <div class="divider" id="divider"></div>
+
+  <div class="panel" id="outputPanel">
+    <div class="panel-header">
+      <span>실행 결과 화면</span>
+    </div>
+    <div id="output-container">
+      <div id="output"></div>
+    </div>
+  </div>
+</div>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-text">Python loading...</div>
+</div>
+
+<script>
+// ── Theme Toggle ──
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  const isLight = html.classList.toggle('light');
+  btn.innerHTML = isLight ? '&#9728;' : '&#9790;';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+
+// Restore saved theme
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('themeBtn').innerHTML = '&#9728;';
+  }
+})();
+
+// ── Font Size ──
+let currentFontSize = parseInt(localStorage.getItem('fontSize') || '15', 10);
+
+function applyFontSize() {
+  const cm = document.querySelector('.CodeMirror');
+  if (cm) cm.style.fontSize = currentFontSize + 'px';
+  document.getElementById('output').style.fontSize = currentFontSize + 'px';
+  document.getElementById('fontSizeLabel').textContent = currentFontSize;
+  // refresh CodeMirror layout
+  if (typeof cmEditor !== 'undefined') cmEditor.refresh();
+}
+
+function changeFontSize(delta) {
+  const next = currentFontSize + delta;
+  if (next < 10 || next > 50) return;
+  currentFontSize = next;
+  localStorage.setItem('fontSize', currentFontSize);
+  applyFontSize();
+}
+
+// ── State ──
+let pyodide = null;
+let isRunning = false;
+let currentInputResolve = null;
+let abortController = null;
+let pasteQueue = [];
+
+// ── Examples ──
+const examples = {
+  hello: `print("Hello, World!")`,
+
+  input: `name = input("이름을 입력하세요: ")
+age = input("나이를 입력하세요: ")
+print(f"안녕하세요 {name}님! {age}살이시군요.")
+print(f"내년에는 {int(age)+1}살이 되시네요.")`,
+
+  loop: `# 1부터 10까지의 합
+total = 0
+for i in range(1, 11):
+    total += i
+    print(f"{i}을(를) 더함, 합계 = {total}")
+
+print(f"\\n최종 합계: {total}")`,
+
+  list: `# 리스트 예제
+fruits = ["사과", "바나나", "체리", "포도", "오렌지"]
+print("과일 목록:", fruits)
+print(f"총 개수: {len(fruits)}")
+print(f"첫 번째: {fruits[0]}")
+print(f"마지막: {fruits[-1]}")
+
+# 항목 추가
+fruits.append("망고")
+print(f"\\n망고 추가 후: {fruits}")
+
+# 정렬
+fruits.sort()
+print(f"정렬 후: {fruits}")
+
+# 리스트 컴프리헨션
+길이목록 = [f"{f}({len(f)}글자)" for f in fruits]
+print(f"글자 수: {길이목록}")`,
+
+  function: `def 인사(name):
+    return f"안녕하세요, {name}님!"
+
+def 더하기(a, b):
+    return a + b
+
+def 팩토리얼(n):
+    if n <= 1:
+        return 1
+    return n * 팩토리얼(n - 1)
+
+print(인사("파이썬"))
+print(f"3 + 5 = {더하기(3, 5)}")
+
+for i in range(1, 8):
+    print(f"{i}! = {팩토리얼(i)}")`,
+
+  calc: `print("=== 간단한 계산기 ===")
+print("연산자: +, -, *, /")
+print()
+
+num1 = float(input("첫 번째 숫자를 입력하세요: "))
+op = input("연산자를 입력하세요 (+, -, *, /): ")
+num2 = float(input("두 번째 숫자를 입력하세요: "))
+
+if op == '+':
+    result = num1 + num2
+elif op == '-':
+    result = num1 - num2
+elif op == '*':
+    result = num1 * num2
+elif op == '/':
+    if num2 == 0:
+        print("오류! 0으로 나눌 수 없습니다.")
+        result = None
+    else:
+        result = num1 / num2
+else:
+    print("알 수 없는 연산자입니다.")
+    result = None
+
+if result is not None:
+    print(f"\\n{num1} {op} {num2} = {result}")`,
+
+  guessing: `import random
+
+정답 = random.randint(1, 50)
+시도횟수 = 0
+
+print("=== 숫자 맞추기 게임 ===")
+print("1부터 50 사이의 숫자를 하나 골랐습니다.")
+print()
+
+while True:
+    추측 = int(input("어떤 숫자일까요? "))
+    시도횟수 += 1
+
+    if 추측 < 정답:
+        print("너무 작아요! 더 큰 숫자를 시도해보세요.")
+    elif 추측 > 정답:
+        print("너무 커요! 더 작은 숫자를 시도해보세요.")
+    else:
+        print(f"\\n정답입니다! {시도횟수}번 만에 맞추셨습니다!")
+        break`,
+
+  turtle_text: `# 텍스트 기반 터틀 아트 (그래픽 불필요)
+import math
+
+width, height = 41, 21
+canvas = [[' ' for _ in range(width)] for _ in range(height)]
+cx, cy = width // 2, height // 2
+
+# Draw a star
+points = 5
+outer_r = 9
+inner_r = 4
+
+coords = []
+for i in range(points * 2):
+    angle = math.pi / 2 + i * math.pi / points
+    r = outer_r if i % 2 == 0 else inner_r
+    x = int(cx + r * math.cos(angle))
+    y = int(cy - r * math.sin(angle) * 0.5)
+    coords.append((x, y))
+
+def draw_line(x0, y0, x1, y1):
+    steps = max(abs(x1 - x0), abs(y1 - y0), 1)
+    for s in range(steps + 1):
+        t = s / steps
+        x = int(x0 + (x1 - x0) * t)
+        y = int(y0 + (y1 - y0) * t)
+        if 0 <= x < width and 0 <= y < height:
+            canvas[y][x] = '*'
+
+for i in range(len(coords)):
+    x0, y0 = coords[i]
+    x1, y1 = coords[(i + 1) % len(coords)]
+    draw_line(x0, y0, x1, y1)
+
+for row in canvas:
+    print(''.join(row))`
+};
+
+// ── UI Helpers ──
+const output = document.getElementById('output');
+const runBtn = document.getElementById('runBtn');
+const stopBtn = document.getElementById('stopBtn');
+const statusEl = document.getElementById('status');
+
+// ── CodeMirror Init ──
+const cmEditor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+  mode: 'python',
+  lineNumbers: true,
+  matchBrackets: true,
+  autoCloseBrackets: true,
+  styleActiveLine: true,
+  indentUnit: 4,
+  tabSize: 4,
+  indentWithTabs: false,
+  lineWrapping: true,
+  extraKeys: {
+    'Ctrl-Enter': () => runCode(),
+    'Cmd-Enter': () => runCode(),
+    'Tab': (cm) => {
+      if (cm.somethingSelected()) {
+        cm.indentSelection('add');
+      } else {
+        cm.replaceSelection('    ', 'end');
+      }
+    },
+    'Shift-Tab': (cm) => cm.indentSelection('subtract'),
+    'Ctrl-/': (cm) => cm.toggleComment(),
+    'Cmd-/': (cm) => cm.toggleComment(),
+  }
+});
+
+// Apply saved font size
+applyFontSize();
+
+function appendOutput(text, cls = 'out-line') {
+  const span = document.createElement('span');
+  span.className = cls;
+  span.textContent = text;
+  output.appendChild(span);
+  output.scrollTop = output.scrollHeight;
+}
+
+function clearOutput() {
+  output.innerHTML = '';
+}
+
+function toggleExamples() {
+  const dd = document.getElementById('exampleDropdown');
+  dd.classList.toggle('show');
+}
+
+function loadExample(name) {
+  cmEditor.setValue(examples[name] || '');
+  document.getElementById('exampleDropdown').classList.remove('show');
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#exampleBtn')) {
+    document.getElementById('exampleDropdown').classList.remove('show');
+  }
+});
+
+// ── Divider drag ──
+const divider = document.getElementById('divider');
+const editorPanel = document.getElementById('editorPanel');
+const outputPanel = document.getElementById('outputPanel');
+
+let isDragging = false;
+
+divider.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  divider.classList.add('dragging');
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const container = document.querySelector('.main-container');
+  const rect = container.getBoundingClientRect();
+  const isVertical = window.innerWidth <= 768;
+
+  if (isVertical) {
+    const pct = ((e.clientY - rect.top) / rect.height) * 100;
+    editorPanel.style.flex = 'none';
+    outputPanel.style.flex = 'none';
+    editorPanel.style.height = Math.max(20, Math.min(80, pct)) + '%';
+    outputPanel.style.height = (100 - Math.max(20, Math.min(80, pct))) + '%';
+  } else {
+    const pct = ((e.clientX - rect.left) / rect.width) * 100;
+    editorPanel.style.flex = 'none';
+    outputPanel.style.flex = 'none';
+    editorPanel.style.width = Math.max(20, Math.min(80, pct)) + '%';
+    outputPanel.style.width = (100 - Math.max(20, Math.min(80, pct))) + '%';
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  divider.classList.remove('dragging');
+});
+
+// ── Pyodide Load ──
+async function loadPyodideEngine() {
+  const overlay = document.getElementById('loading-overlay');
+  const loadingText = document.getElementById('loading-text');
+
+  try {
+    loadingText.textContent = 'Downloading Pyodide...';
+
+    // Load Pyodide script
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+
+    loadingText.textContent = 'Initializing Python...';
+
+    pyodide = await loadPyodide({
+      indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/'
+    });
+
+    // Setup stdout/stderr capture
+    pyodide.setStdout({
+      batched: (text) => {
+        appendOutput(text + '\n', 'out-line');
+      }
+    });
+
+    pyodide.setStderr({
+      batched: (text) => {
+        appendOutput(text + '\n', 'err-line');
+      }
+    });
+
+    statusEl.textContent = '준비';
+    statusEl.className = 'ready';
+    runBtn.disabled = false;
+    overlay.classList.add('hidden');
+
+  } catch (err) {
+    loadingText.textContent = 'Failed to load. Please refresh.';
+    statusEl.textContent = '로드 에러';
+    statusEl.className = 'error';
+    console.error(err);
+  }
+}
+
+// ── input() Implementation ──
+// Creates an inline input field in the console, returns a Promise
+function submitInput(row, inp, promptText, resolve, val) {
+  row.innerHTML = '';
+  if (promptText) {
+    const label = document.createElement('span');
+    label.className = 'input-prompt-text';
+    label.textContent = promptText;
+    row.appendChild(label);
+  }
+  const echo = document.createElement('span');
+  echo.className = 'input-echo';
+  echo.textContent = val;
+  row.appendChild(echo);
+  row.appendChild(document.createTextNode('\n'));
+  row.className = '';
+  currentInputResolve = null;
+  resolve(val);
+}
+
+function requestInput(promptText) {
+  return new Promise((resolve) => {
+    const row = document.createElement('div');
+    row.className = 'input-row';
+
+    if (promptText) {
+      const label = document.createElement('span');
+      label.className = 'prompt-label';
+      label.textContent = promptText;
+      row.appendChild(label);
+    }
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.autocomplete = 'off';
+    inp.spellcheck = false;
+    row.appendChild(inp);
+
+    output.appendChild(row);
+    output.scrollTop = output.scrollHeight;
+
+    currentInputResolve = resolve;
+
+    // If paste queue has a value, auto-submit immediately
+    if (pasteQueue.length > 0) {
+      const val = pasteQueue.shift();
+      inp.value = val;
+      setTimeout(() => submitInput(row, inp, promptText, resolve, val), 0);
+      return;
+    }
+
+    inp.focus();
+
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        submitInput(row, inp, promptText, resolve, inp.value);
+      }
+    });
+
+    inp.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData).getData('text');
+      const lines = pasted.split(/\r?\n/);
+      // Use first line for current input, queue the rest
+      inp.value = lines[0];
+      if (lines.length > 1) {
+        pasteQueue.push(...lines.slice(1).filter((_, i, arr) => i < arr.length || arr[i] !== ''));
+        // Remove trailing empty line from final newline
+        if (pasteQueue.length > 0 && pasteQueue[pasteQueue.length - 1] === '') {
+          pasteQueue.pop();
+        }
+      }
+      submitInput(row, inp, promptText, resolve, lines[0]);
+    });
+  });
+}
+
+// Expose to Pyodide
+globalThis._jsInputRequest = requestInput;
+
+// ── Run Code ──
+async function runCode() {
+  if (!pyodide || isRunning) return;
+
+  const code = cmEditor.getValue();
+  if (!code.trim()) return;
+
+  clearOutput();
+  pasteQueue = [];
+  isRunning = true;
+  runBtn.style.display = 'none';
+  stopBtn.style.display = '';
+  statusEl.textContent = '실행 중...';
+  statusEl.className = 'running';
+
+  abortController = new AbortController();
+
+  try {
+    // Re-setup stdout/stderr for this run
+    pyodide.setStdout({
+      batched: (text) => {
+        appendOutput(text + '\n', 'out-line');
+      }
+    });
+    pyodide.setStderr({
+      batched: (text) => {
+        appendOutput(text + '\n', 'err-line');
+      }
+    });
+
+    // Security: block dangerous patterns before execution
+    const forbidden = [
+      { pattern: /\b__import__\s*\(/,         msg: "__import__() is not allowed." },
+      { pattern: /\bgetattr\s*\(\s*builtins/, msg: "Direct access to builtins is not allowed." },
+      { pattern: /\bglobals\s*\(\s*\)/,       msg: "globals() is not allowed." },
+      { pattern: /\bbreakpoint\s*\(/,         msg: "breakpoint() is not allowed." },
+      { pattern: /\bfrom\s+js\s+import/,      msg: "'js' module is not allowed." },
+      { pattern: /\bimport\s+js\b/,           msg: "'js' module is not allowed." },
+      { pattern: /\bimport\s+pyodide\b/,      msg: "'pyodide' module is not allowed." },
+      { pattern: /\bfrom\s+pyodide[\s.]/,     msg: "'pyodide' module is not allowed." },
+      { pattern: /\bexec\s*\(/,               msg: "exec() is not allowed." },
+      { pattern: /\beval\s*\(/,               msg: "eval() is not allowed." },
+      { pattern: /\bcompile\s*\(/,            msg: "compile() is not allowed." },
+      { pattern: /\bimport\s+subprocess\b/,   msg: "'subprocess' module is not allowed." },
+      { pattern: /\bimport\s+socket\b/,       msg: "'socket' module is not allowed." },
+      { pattern: /\bimport\s+ctypes\b/,       msg: "'ctypes' module is not allowed." },
+      { pattern: /\bimport\s+shutil\b/,       msg: "'shutil' module is not allowed." },
+      { pattern: /\bopen\s*\(/,               msg: "open() is not allowed." },
+    ];
+
+    for (const rule of forbidden) {
+      if (rule.pattern.test(code)) {
+        throw new Error(rule.msg);
+      }
+    }
+
+    // Step 0: Clear previous user variables for a fresh run
+    const globals = pyodide.globals;
+    const toDelete = [];
+    for (const key of globals.toJs().keys()) {
+      if (!key.startsWith('_')) {
+        toDelete.push(key);
+      }
+    }
+    for (const key of toDelete) {
+      globals.delete(key);
+    }
+
+    // Step 1: Setup async input()
+    await pyodide.runPythonAsync(`
+import builtins as _builtins
+from js import _jsInputRequest
+
+async def _custom_input(prompt=""):
+    result = await _jsInputRequest(prompt)
+    return result
+
+_builtins.input = _custom_input
+`);
+
+    // Step 2: AST transform - make input() async-compatible
+    // 1. Find all functions that use input() directly or call other such functions
+    // 2. Convert those functions to async def
+    // 3. Add await to input() calls and calls to those async functions
+    await pyodide.runPythonAsync(`
+import ast as _ast
+
+_user_code = ${JSON.stringify(code)}
+
+def _transform_for_async_input(source):
+    tree = _ast.parse(source)
+
+    # Pass 1: find all functions that need to become async
+    # (contain input() or call another function that needs async)
+    async_funcs = set()
+    func_nodes = {}
+
+    # Collect all function definitions
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.FunctionDef):
+            func_nodes[node.name] = node
+
+    # Check which functions contain input() directly
+    def _has_direct_input(func_node):
+        for child in _ast.walk(func_node):
+            if child is func_node:
+                continue
+            # Don't descend into nested function defs
+            if isinstance(child, (_ast.FunctionDef, _ast.AsyncFunctionDef)) and child is not func_node:
+                continue
+            if isinstance(child, _ast.Call) and isinstance(child.func, _ast.Name) and child.func.id == 'input':
+                return True
+        return False
+
+    def _calls_in_func(func_node):
+        calls = set()
+        for child in _ast.walk(func_node):
+            if isinstance(child, _ast.Call) and isinstance(child.func, _ast.Name):
+                calls.add(child.func.id)
+        return calls
+
+    # Initial: mark functions with direct input()
+    for name, node in func_nodes.items():
+        if _has_direct_input(node):
+            async_funcs.add(name)
+
+    # Propagate: if a function calls an async function, it must also be async
+    changed = True
+    while changed:
+        changed = False
+        for name, node in func_nodes.items():
+            if name not in async_funcs:
+                calls = _calls_in_func(node)
+                if calls & async_funcs:
+                    async_funcs.add(name)
+                    changed = True
+
+    # Pass 2: transform the AST
+    class _AsyncTransformer(_ast.NodeTransformer):
+        def visit_FunctionDef(self, node):
+            self.generic_visit(node)
+            if node.name in async_funcs:
+                return _ast.AsyncFunctionDef(
+                    name=node.name,
+                    args=node.args,
+                    body=node.body,
+                    decorator_list=node.decorator_list,
+                    returns=node.returns,
+                    lineno=node.lineno,
+                    col_offset=node.col_offset,
+                )
+            return node
+
+        def visit_Call(self, node):
+            self.generic_visit(node)
+            if isinstance(node.func, _ast.Name):
+                if node.func.id == 'input' or node.func.id in async_funcs:
+                    return _ast.Await(value=node)
+            return node
+
+    tree = _AsyncTransformer().visit(tree)
+    _ast.fix_missing_locations(tree)
+    return _ast.unparse(tree)
+
+_transformed_source = _transform_for_async_input(_user_code)
+`);
+    const transformedSource = pyodide.globals.get('_transformed_source');
+
+    // Step 3: Run user code
+    await pyodide.runPythonAsync(transformedSource);
+
+    statusEl.textContent = '완료';
+    statusEl.className = 'ready';
+
+  } catch (err) {
+    const msg = err.message || String(err);
+    // Filter out internal traceback noise, show clean error
+    const lines = msg.split('\n');
+    const filtered = lines.filter(l =>
+      !l.includes('eval_code_async') &&
+      !l.includes('_pyodide/_base.py') &&
+      !l.includes('CodeRunner')
+    );
+    const pyErr = filtered.length > 0 ? filtered.join('\n').trim() : msg;
+    appendOutput(pyErr + '\n', 'err-line');
+    statusEl.textContent = '오류';
+    statusEl.className = 'error';
+  } finally {
+    isRunning = false;
+    runBtn.style.display = '';
+    stopBtn.style.display = 'none';
+    currentInputResolve = null;
+  }
+}
+
+function stopCode() {
+  if (currentInputResolve) {
+    currentInputResolve('');
+    currentInputResolve = null;
+  }
+  // Interrupt pyodide
+  if (pyodide) {
+    try { pyodide.interrupt(); } catch(e) {}
+  }
+  isRunning = false;
+  runBtn.style.display = '';
+  stopBtn.style.display = 'none';
+  statusEl.textContent = '중단됨';
+  statusEl.className = 'error';
+  appendOutput('\n[Execution stopped]\n', 'info-line');
+}
+
+// ── Service Worker for Offline ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── Init ──
+loadPyodideEngine();
+</script>
+</body>
+</html>
