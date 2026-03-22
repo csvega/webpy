@@ -451,6 +451,93 @@
     font-size: 14px;
   }
 
+  /* About modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.show {
+    display: flex;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    max-width: 460px;
+    width: 90%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+
+  .modal h2 {
+    font-size: 20px;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .modal p {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+
+  .modal .lib-list {
+    margin: 12px 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .modal .lib-list li {
+    font-size: 13px;
+    color: var(--text-dim);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.6;
+  }
+
+  .modal .lib-list li:last-child {
+    border-bottom: none;
+  }
+
+  .modal .lib-list li strong {
+    color: var(--text);
+  }
+
+  .modal .lib-list li a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .modal .lib-list li a:hover {
+    text-decoration: underline;
+  }
+
+  .modal .modal-close {
+    margin-top: 16px;
+    width: 100%;
+    padding: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .modal .modal-close:hover {
+    background: var(--accent-hover);
+  }
+
   /* Responsive */
   @media (max-width: 768px) {
     .main-container {
@@ -471,6 +558,7 @@
   <h1>Web <span>Python</span> Playground</h1>
   <div class="header-right">
     <span id="status">Pyodide loading...</span>
+    <button class="btn btn-theme" onclick="toggleAbout()" title="About">About</button>
     <button class="btn btn-theme" id="themeBtn" onclick="toggleTheme()" title="테마 전환">&#9790;</button>
     <span class="font-size-group">
       <button class="btn btn-theme" onclick="changeFontSize(-2)" title="글씨 축소">A-</button>
@@ -525,12 +613,39 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="aboutModal" onclick="if(event.target===this)toggleAbout()">
+  <div class="modal">
+    <h2>Web Python Playground</h2>
+    <p>제작자: <strong>vega</strong></p>
+    <p>브라우저에서 Python을 실행할 수 있는 온라인 코드 에디터입니다.</p>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:8px;">사용된 오픈소스 라이브러리:</p>
+    <ul class="lib-list">
+      <li>
+        <strong>Pyodide v0.27.5</strong> — Python을 WebAssembly로 실행<br>
+        라이선스: MPL-2.0 (Mozilla Public License 2.0)<br>
+        <a href="https://github.com/pyodide/pyodide" target="_blank" rel="noopener">github.com/pyodide/pyodide</a>
+      </li>
+      <li>
+        <strong>CodeMirror v5.65.18</strong> — 코드 에디터 컴포넌트<br>
+        라이선스: MIT License<br>
+        <a href="https://github.com/codemirror/codemirror5" target="_blank" rel="noopener">github.com/codemirror/codemirror5</a>
+      </li>
+    </ul>
+    <button class="modal-close" onclick="toggleAbout()">닫기</button>
+  </div>
+</div>
+
 <div id="loading-overlay">
   <div class="spinner"></div>
   <div id="loading-text">Python loading...</div>
 </div>
 
 <script>
+// ── About Modal ──
+function toggleAbout() {
+  document.getElementById('aboutModal').classList.toggle('show');
+}
+
 // ── Theme Toggle ──
 function toggleTheme() {
   const html = document.documentElement;
