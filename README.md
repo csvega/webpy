@@ -61,6 +61,17 @@ webpy/
 └── README.md
 ```
 
+## 제작자
+
+**vega**
+
+## 사용된 오픈소스 라이브러리
+
+| 라이브러리 | 버전 | 라이선스 | 링크 |
+|---|---|---|---|
+| Pyodide | v0.27.5 | MPL-2.0 (Mozilla Public License 2.0) | [github.com/pyodide/pyodide](https://github.com/pyodide/pyodide) |
+| CodeMirror 5 | v5.65.18 | MIT License | [github.com/codemirror/codemirror5](https://github.com/codemirror/codemirror5) |
+
 ## 라이선스
 
 MIT License
