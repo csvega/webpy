@@ -873,6 +873,7 @@ function appendOutput(text, cls = 'out-line') {
   output.appendChild(span);
   output.scrollTop = output.scrollHeight;
 }
+globalThis._jsAppendOutput = appendOutput;
 
 function clearOutput() {
   output.innerHTML = '';
@@ -1080,18 +1081,6 @@ async function runCode() {
   abortController = new AbortController();
 
   try {
-    // Re-setup stdout/stderr for this run
-    pyodide.setStdout({
-      batched: (text) => {
-        appendOutput(text + '\n', 'out-line');
-      }
-    });
-    pyodide.setStderr({
-      batched: (text) => {
-        appendOutput(text + '\n', 'err-line');
-      }
-    });
-
     // Security: block dangerous patterns before execution
     const forbidden = [
       { pattern: /\b__import__\s*\(/,         msg: "__import__() is not allowed." },
@@ -1130,16 +1119,32 @@ async function runCode() {
       globals.delete(key);
     }
 
-    // Step 1: Setup async input()
+    // Step 1: Setup async input() and unbuffered stdout/stderr
     await pyodide.runPythonAsync(`
 import builtins as _builtins
-from js import _jsInputRequest
+import sys as _sys
+from js import _jsInputRequest, _jsAppendOutput
 
 async def _custom_input(prompt=""):
     result = await _jsInputRequest(prompt)
     return result
 
 _builtins.input = _custom_input
+
+class _DirectOut:
+    def __init__(self, cls):
+        self._cls = cls
+    def write(self, text):
+        if text:
+            _jsAppendOutput(text, self._cls)
+        return len(text)
+    def flush(self):
+        pass
+    def isatty(self):
+        return False
+
+_sys.stdout = _DirectOut('out-line')
+_sys.stderr = _DirectOut('err-line')
 `);
 
     // Step 2: AST transform - make input() async-compatible
