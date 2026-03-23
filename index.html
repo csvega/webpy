@@ -1120,10 +1120,11 @@ async function runCode() {
     }
 
     // Step 1: Setup async input() and unbuffered stdout/stderr
+    pyodide.globals.set('_jsAppendOutput', appendOutput);
     await pyodide.runPythonAsync(`
 import builtins as _builtins
 import sys as _sys
-from js import _jsInputRequest, _jsAppendOutput
+from js import _jsInputRequest
 
 async def _custom_input(prompt=""):
     result = await _jsInputRequest(prompt)
