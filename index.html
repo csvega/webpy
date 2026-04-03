@@ -863,6 +863,10 @@ const cmEditor = CodeMirror.fromTextArea(document.getElementById('editor'), {
     "'": (cm) => {
       const cursor = cm.getCursor();
       const line = cm.getLine(cursor.line);
+      if (line[cursor.ch] === "'") {
+        cm.setCursor({line: cursor.line, ch: cursor.ch + 1});
+        return;
+      }
       if (line[cursor.ch - 1] === 'f') {
         cm.replaceSelection("''");
         cm.setCursor({line: cursor.line, ch: cursor.ch + 1});
@@ -882,6 +886,11 @@ cmEditor.on('keydown', function(cm, e) {
   if (e.key !== '"') return;
   const cursor = cm.getCursor();
   const line = cm.getLine(cursor.line);
+  if (line[cursor.ch] === '"') {
+    e.preventDefault();
+    cm.setCursor({line: cursor.line, ch: cursor.ch + 1});
+    return;
+  }
   if (line[cursor.ch - 1] === 'f') {
     e.preventDefault();
     cm.replaceSelection('""');
