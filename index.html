@@ -841,7 +841,7 @@ const cmEditor = CodeMirror.fromTextArea(document.getElementById('editor'), {
   mode: 'python',
   lineNumbers: true,
   matchBrackets: true,
-  autoCloseBrackets: "()[]{}''"  ,
+  autoCloseBrackets: true,
   styleActiveLine: true,
   indentUnit: 4,
   tabSize: 4,
@@ -870,21 +870,22 @@ const cmEditor = CodeMirror.fromTextArea(document.getElementById('editor'), {
       }
       return CodeMirror.Pass;
     },
-    '"': (cm) => {
-      const cursor = cm.getCursor();
-      const line = cm.getLine(cursor.line);
-      if (line[cursor.ch] === '"') {
-        cm.setCursor({line: cursor.line, ch: cursor.ch + 1});
-        return;
-      }
-      cm.replaceSelection('""');
-      cm.setCursor({line: cursor.line, ch: cursor.ch + 1});
-    },
   }
 });
 
 // Apply saved font size
 applyFontSize();
+
+// f-string 자동완성: f" → f"" (autoCloseBrackets는 f 뒤 따옴표를 닫지 않아서 별도 처리)
+cmEditor.on('inputRead', function(cm, change) {
+  if (change.text.length !== 1 || change.text[0] !== '"') return;
+  const cursor = cm.getCursor();
+  const line = cm.getLine(cursor.line);
+  if (cursor.ch >= 2 && line[cursor.ch - 2] === 'f' && line[cursor.ch] !== '"') {
+    cm.replaceSelection('"');
+    cm.setCursor({line: cursor.line, ch: cursor.ch});
+  }
+});
 
 function appendOutput(text, cls = 'out-line') {
   const span = document.createElement('span');
