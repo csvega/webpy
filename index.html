@@ -358,13 +358,13 @@
     display: flex;
     align-items: baseline;
     line-height: 1.6;
-    min-height: calc(14px * 1.6);
+    min-height: calc(1em * 1.6);
   }
 
   .input-row .prompt-label {
     color: var(--yellow);
     white-space: pre;
-    font-size: 14px;
+    font-size: inherit;
     line-height: 1.6;
   }
 
@@ -376,7 +376,7 @@
     outline: none;
     color: var(--green);
     font-family: 'Consolas', 'D2Coding', 'Fira Code', monospace;
-    font-size: 14px;
+    font-size: inherit;
     line-height: 1.6;
     padding: 0 4px;
     margin: 0;
@@ -860,6 +860,26 @@ const cmEditor = CodeMirror.fromTextArea(document.getElementById('editor'), {
     'Shift-Tab': (cm) => cm.indentSelection('subtract'),
     'Ctrl-/': (cm) => cm.toggleComment(),
     'Cmd-/': (cm) => cm.toggleComment(),
+    "'": (cm) => {
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line);
+      if (line[cursor.ch - 1] === 'f') {
+        cm.replaceSelection("''");
+        cm.setCursor({line: cursor.line, ch: cursor.ch + 1});
+        return;
+      }
+      return CodeMirror.Pass;
+    },
+    '"': (cm) => {
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line);
+      if (line[cursor.ch - 1] === 'f') {
+        cm.replaceSelection('""');
+        cm.setCursor({line: cursor.line, ch: cursor.ch + 1});
+        return;
+      }
+      return CodeMirror.Pass;
+    },
   }
 });
 
